@@ -7,6 +7,7 @@
 #include <exception>
 #include <pqxx/pqxx>
 #include <string>
+#include <fstream>
 
 #include "prod.hh"
 #include "dut.hh"
@@ -22,11 +23,29 @@ struct logger {
 
 /// logger to dump all generated queries
 struct query_dumper : logger {
-  virtual void generated(prod &query) {
-       query.out(std::cout);
-       std::cout << ";" << std::endl;
+  query_dumper() {
+      myfile.open ("queries.log");
   }
+  virtual void generated(prod &query) {
+       query.out(myfile);
+       myfile << ";" << std::endl;
+       myfile.flush();
+  }
+  std::ofstream myfile;
 };
+
+struct error_dumper{
+  error_dumper() {
+      myfile.open ("queries.err");
+  }
+  void log(const char* sql) {
+       myfile << sql << std::endl;
+       myfile.flush();
+  }
+  std::ofstream myfile;
+};
+
+
 
 /// logger for statistics collection
 struct stats_collecting_logger : logger {

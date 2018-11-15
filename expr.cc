@@ -98,13 +98,13 @@ shared_ptr<bool_expr> bool_expr::factory(prod *p)
   try {
        if (p->level > d100())
 	    return make_shared<truth_value>(p);
-       if(d6() < 4)
+       if(d6() < 2)
 	    return make_shared<comparison_op>(p);
-       else if (d6() < 4)
+       else if (d6() < 2)
 	    return make_shared<bool_term>(p);
-       else if (d6() < 4)
+       else if (d6() < 2)
 	    return make_shared<null_predicate>(p);
-       else if (d6() < 4)
+       else if (d6() < 2)
 	    return make_shared<truth_value>(p);
        else
 	    return make_shared<exists_predicate>(p);
@@ -189,7 +189,8 @@ void coalesce::out(std::ostream &out)
       out << ",", indent(out);
   }
   out << ")";
-  out << " as " << type->name << ")";
+ // out << " as " << type->name << ")";
+  out << " as " << "SIGNED" << ")";
 }
 
 const_expr::const_expr(prod *p, sqltype *type_constraint)
@@ -200,8 +201,8 @@ const_expr::const_expr(prod *p, sqltype *type_constraint)
   if (type == scope->schema->inttype)
     expr = to_string(d100());
   else if (type == scope->schema->booltype)
-    expr += (d6() > 3) ? scope->schema->true_literal : scope->schema->false_literal;
-  else if (dynamic_cast<insert_stmt*>(p) && (d6() > 3))
+    expr += (d6() > 2) ? scope->schema->true_literal : scope->schema->false_literal;
+  else if (dynamic_cast<insert_stmt*>(p) && (d6() > 2))
     expr += "default";
   else
     expr += "cast(null as " + type->name + ")";
@@ -214,7 +215,7 @@ funcall::funcall(prod *p, sqltype *type_constraint, bool agg)
     fail("cannot call functions involving internal type");
 
   auto &idx = agg ? p->scope->schema->aggregates_returning_type
-    : (4 < d6()) ?
+    : (2 < d6()) ?
     p->scope->schema->routines_returning_type
     : p->scope->schema->parameterless_routines_returning_type;
 
@@ -276,10 +277,10 @@ void funcall::out(std::ostream &out)
 }
 
 atomic_subselect::atomic_subselect(prod *p, sqltype *type_constraint)
-  : value_expr(p), offset((d6() == 6) ? d100() : d6())
+  : value_expr(p), offset((d6() == 3) ? d100() : d6())
 {
   match();
-  if (d6() < 3) {
+  if (d6() < 2) {
     if (type_constraint) {
       auto idx = scope->schema->aggregates_returning_type;
       auto iters = idx.equal_range(type_constraint);
@@ -363,11 +364,11 @@ window_function::window_function(prod *p, sqltype *type_constraint)
   aggregate = make_shared<funcall>(this, type_constraint, true);
   type = aggregate->type;
   partition_by.push_back(make_shared<column_reference>(this));
-  while(d6() > 4)
+  while(d6() > 2)
     partition_by.push_back(make_shared<column_reference>(this));
 
   order_by.push_back(make_shared<column_reference>(this));
-  while(d6() > 4)
+  while(d6() > 2)
     order_by.push_back(make_shared<column_reference>(this));
 }
 

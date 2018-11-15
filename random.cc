@@ -5,22 +5,22 @@ namespace smith {
 }
 
 int d6() {
-  static std::uniform_int_distribution<> pick(1, 6);
+  static std::uniform_int_distribution<> pick(1, 3);
   return pick(smith::rng);
 }
 
 int d9() {
-  static std::uniform_int_distribution<> pick(1, 9);
+  static std::uniform_int_distribution<> pick(1, 4);
   return pick(smith::rng);
 }
 
 int d12() {
-  static std::uniform_int_distribution<> pick(1, 12);
+  static std::uniform_int_distribution<> pick(1, 6);
   return pick(smith::rng);
 }
 
 int d20() {
-  static std::uniform_int_distribution<> pick(1, 20);
+  static std::uniform_int_distribution<> pick(1, 10);
   return pick(smith::rng);
 }
 
@@ -30,6 +30,6 @@ int d42() {
 }
 
 int d100() {
-  static std::uniform_int_distribution<> pick(1, 100);
+  static std::uniform_int_distribution<> pick(1, 50);
   return pick(smith::rng);
 }

@@ -14,13 +14,13 @@ using namespace std;
 
 shared_ptr<table_ref> table_ref::factory(prod *p) {
   try {
-    if (p->level < 3 + d6()) {
-      if (d6() > 3 && p->level < d6())
+    if (p->level < d6()) {
+      if (d6() > 2 && p->level < d6())
 	return make_shared<table_subquery>(p);
-      if (d6() > 3)
+      if (d6() > 2)
 	return make_shared<joined_table>(p);
     }
-    if (d6() > 3)
+    if (d6() < 3)
       return make_shared<table_or_query_name>(p);
     else
       return make_shared<table_sample>(p);
@@ -73,9 +73,7 @@ table_sample::table_sample(prod *p) : table_ref(p) {
 
 void table_sample::out(std::ostream &out) {
   out << t->ident() <<
-    " as " << refs[0]->ident() <<
-    " tablesample " << method <<
-    " (" << percent << ") ";
+    " as " << refs[0]->ident();
 }
 
 table_subquery::table_subquery(prod *p, bool lateral)
@@ -96,7 +94,7 @@ void table_subquery::accept(prod_visitor *v) {
 shared_ptr<join_cond> join_cond::factory(prod *p, table_ref &lhs, table_ref &rhs)
 {
      try {
-	  if (d6() < 6)
+	  if (d6() < 2)
 	       return make_shared<expr_join_cond>(p, lhs, rhs);
 	  else
 	       return make_shared<simple_join_cond>(p, lhs, rhs);
@@ -156,9 +154,9 @@ joined_table::joined_table(prod *p) : table_ref(p) {
 
   condition = join_cond::factory(this, *lhs, *rhs);
 
-  if (d6()<4) {
+  if (d6()<2) {
     type = "inner";
-  } else if (d6()<4) {
+  } else if (d6()<2) {
     type = "left";
   } else {
     type = "right";
@@ -202,14 +200,14 @@ from_clause::from_clause(prod *p) : prod(p) {
   for (auto r : reflist.back()->refs)
     scope->refs.push_back(&*r);
 
-  while (d6() > 5) {
-    // add a lateral subquery
-    if (!impedance::matched(typeid(lateral_subquery)))
-      break;
-    reflist.push_back(make_shared<lateral_subquery>(this));
-    for (auto r : reflist.back()->refs)
-      scope->refs.push_back(&*r);
-  }
+  //while (d6() > 5) {
+  //  // add a lateral subquery
+  //  if (!impedance::matched(typeid(lateral_subquery)))
+  //    break;
+  //  reflist.push_back(make_shared<lateral_subquery>(this));
+  //  for (auto r : reflist.back()->refs)
+  //    scope->refs.push_back(&*r);
+  //}
 }
 
 select_list::select_list(prod *p) : prod(p)
@@ -222,7 +220,7 @@ select_list::select_list(prod *p) : prod(p)
     sqltype *t=e->type;
     assert(t);
     derived_table.columns().push_back(column(name.str(), t));
-  } while (d6() > 1);
+  } while (d6() > 2);
 }
 
 void select_list::out(std::ostream &out)
@@ -287,8 +285,6 @@ select_for_update::select_for_update(prod *p, struct scope *s, bool lateral)
   static const char *modes[] = {
     "update",
     "share",
-    "no key update",
-    "key share",
   };
 
   try {
@@ -409,7 +405,7 @@ set_list::set_list(prod *p, table *target) : prod(p)
 {
   do {
     for (auto col : target->columns()) {
-      if (d6() < 4)
+      if (d6() < 2)
 	continue;
       auto expr = value_expr::factory(this, col.type);
       value_exprs.push_back(expr);
@@ -463,27 +459,28 @@ upsert_stmt::upsert_stmt(prod *p, struct scope *s, table *v)
   constraint = random_pick(victim->constraints);
 }
 
-shared_ptr<prod> statement_factory(struct scope *s)
+shared_ptr<prod> statement_factory(struct scope *s, bool select_only)
 {
   try {
     s->new_stmt();
-    if (d42() == 1)
-      return make_shared<merge_stmt>((struct prod *)0, s);
-    if (d42() == 1)
+    //if (d42() == 1)
+    //  return make_shared<merge_stmt>((struct prod *)0, s);
+    if (d42() == 1 && !select_only)
       return make_shared<insert_stmt>((struct prod *)0, s);
-    else if (d42() == 1)
-      return make_shared<delete_returning>((struct prod *)0, s);
-    else if (d42() == 1) {
-      return make_shared<upsert_stmt>((struct prod *)0, s);
-    } else if (d42() == 1)
-      return make_shared<update_returning>((struct prod *)0, s);
-    else if (d6() > 4)
+    //else if (d42() == 1)
+    //  return make_shared<delete_stmt>((struct prod *)0, s);
+    //else if (d42() == 1) {
+    //  return make_shared<upsert_stmt>((struct prod *)0, s);
+    //} else if (d42() == 1)
+    else if (d42() == 1 && !select_only)
+      return make_shared<update_stmt>((struct prod *)0, s);
+    else if (d6() > 2)
       return make_shared<select_for_update>((struct prod *)0, s);
-    else if (d6() > 5)
-      return make_shared<common_table_expression>((struct prod *)0, s);
+    //else if (d6() > 5)
+    //  return make_shared<common_table_expression>((struct prod *)0, s);
     return make_shared<query_spec>((struct prod *)0, s);
   } catch (runtime_error &e) {
-    return statement_factory(s);
+    return statement_factory(s, select_only);
   }
 }
 
@@ -514,7 +511,7 @@ common_table_expression::common_table_expression(prod *parent, struct scope *s)
   do {
     auto pick = random_pick(s->tables);
     scope->tables.push_back(pick);
-  } while (d6() > 3);
+  } while (d6() > 2);
   try {
     query = make_shared<query_spec>(this, scope);
   } catch (runtime_error &e) {
@@ -553,7 +550,7 @@ merge_stmt::merge_stmt(prod *p, struct scope *s, table *v)
 //     scope->refs.push_back(&*r);
 
   clauselist.push_back(when_clause::factory(this));
-  while (d6()>4)
+  while (d6()>2)
     clauselist.push_back(when_clause::factory(this));
 }
 
@@ -586,7 +583,7 @@ when_clause::when_clause(merge_stmt *p)
   : prod(p)
 {
   condition = bool_expr::factory(this);
-  matched = d6() > 3;
+  matched = d6() > 2;
 }
 
 void when_clause::out(std::ostream &out)
@@ -667,10 +664,8 @@ shared_ptr<when_clause> when_clause::factory(struct merge_stmt *p)
   try {
     switch(d6()) {
     case 1:
-    case 2:
       return make_shared<when_clause_insert>(p);
-    case 3:
-    case 4:
+    case 2:
       return make_shared<when_clause_update>(p);
     default:
       return make_shared<when_clause>(p);
